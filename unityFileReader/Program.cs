@@ -160,7 +160,7 @@ class UnityFileReader
 
         CreateFileCs(usedGuid, metaCsList);
 
-        var input = new StringReader(sceneList[0]);
+        var input = new StreamReader(sceneList[1]);
         var yaml = new YamlStream();
         yaml.Load(input);
 
@@ -168,7 +168,8 @@ class UnityFileReader
         foreach (var document in yaml.Documents)
         {
             var rootMappingNode = (YamlMappingNode)document.RootNode;
-
+            Console.WriteLine(rootMappingNode);
+            Console.WriteLine();
         }
 
     }

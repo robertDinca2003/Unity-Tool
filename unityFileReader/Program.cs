@@ -144,7 +144,6 @@ class UnityFileReader
             }
             
             
-            //Console.WriteLine(line);
         }
 
         foreach (var objects in allObjects)
@@ -168,7 +167,7 @@ class UnityFileReader
             FileInfo file = new FileInfo(@content);
             temp += file.Name;
             temp += ".dump";
-            Console.WriteLine(temp);
+            Console.WriteLine(file.Name+".dump was created in the output folder" );
             File.WriteAllText(Path.Combine(_outputFolderPath,temp),_answerHierarchy);
             _answerHierarchy = "";
         }
@@ -182,10 +181,27 @@ class UnityFileReader
 
 
 
-    static void GetAllFiles(string path)
+    static bool GetAllFiles(string path, int depth)
     {
         DirectoryInfo dirInfo = new DirectoryInfo(@path);
-        
+
+        if (dirInfo.Name != "Assets" && depth == 0)
+        {
+            foreach (var newDir in dirInfo.GetDirectories())
+            {
+                if (newDir.Name == "Assets")
+                {
+                    dirInfo = new DirectoryInfo(@newDir.FullName);
+                    
+                    break;
+                }
+            }
+        }
+        if (!dirInfo.FullName.Substring(dirInfo.FullName.Length-6).Contains("Assets") && depth == 0)
+        {
+            Console.WriteLine("No Assets Folder Found");
+            return false;
+        }
         FileInfo[] files = dirInfo.GetFiles();
         foreach (FileInfo f in files)
         {
@@ -193,8 +209,10 @@ class UnityFileReader
         }
         foreach (DirectoryInfo dir in dirInfo.GetDirectories())  
         {
-            GetAllFiles(dir.FullName);
+            GetAllFiles(dir.FullName,depth+1);
         }
+
+        return true;
     }
 
     static void CreateFileCs(List<string> usedScripts,  List<KeyValuePair<string,string>> guidScript)
@@ -218,8 +236,12 @@ class UnityFileReader
        
         if (Directory.Exists(_outputFolderPath))
         {
-            File.WriteAllText(Path.Combine(_outputFolderPath,"UsedScripts.txt"),fileUsed);
-            File.WriteAllText(Path.Combine(_outputFolderPath,"UnusedScripts.txt"),fileUnused);
+            Console.WriteLine("UsedScripts.txt was created in the output folder");
+            string temp = _outputFolderPath + "UsedScripts.txt";
+            File.WriteAllText(@temp,fileUsed);
+            temp = _outputFolderPath + "UnusedScripts.txt";
+            Console.WriteLine("UnusedScripts.txt was created in the output folder");
+            File.WriteAllText(temp,fileUnused);
         }
         else
         {
@@ -231,6 +253,38 @@ class UnityFileReader
 
     static void WorkingOnUnityProject(string? projectPath, string? outputPath)
     {
+        if (projectPath == null || outputPath == null)
+        {
+            Console.WriteLine("Rerun the program, it occured an problem with the paths");
+        }
+        if (projectPath != null && projectPath[^1] != '\\' && projectPath[^1] != '/')
+        {
+            if (projectPath.Contains('/'))
+            {
+                projectPath += "/";
+                _unityProjectPath += "/";
+            }
+
+            if (projectPath.Contains('\\'))
+            {
+                projectPath += "\\";
+                _unityProjectPath += "\\";
+            }
+        }
+        if (outputPath != null && outputPath[^1] != '\\' && outputPath[^1] != '/')
+        {
+            if (outputPath.Contains('/'))
+            {
+                outputPath += "/";
+                _outputFolderPath += "/";
+            }
+            if(outputPath.Contains('\\'))
+            {
+                outputPath += "\\";
+                _outputFolderPath += "/";
+            }
+        }
+        
         List<string> csList = new List<string>();
         List<string> sceneList = new List<string>();
         List<KeyValuePair<string, string>> metaCsList = new List<KeyValuePair<string, string>>();
@@ -249,7 +303,11 @@ class UnityFileReader
             if (@outputPath != null) Directory.CreateDirectory(@outputPath);
         }
 
-        GetAllFiles(projectPath);
+        if (!GetAllFiles(projectPath,0))
+        {
+            Console.WriteLine("Rerun the program!");
+            return;
+        }
 
         foreach (string f in FileList)
         {
@@ -267,14 +325,19 @@ class UnityFileReader
         foreach (string script in csList)
         {
             string e = script + ".meta";
+            if(File.Exists(@e))
+                continue;
             string[] temp = File.ReadAllLines(@e);
             foreach (var line in temp)
             {
-                if (line.Length>=6 && line.Substring(0, 6) == "guid: ")
-                {
-                    metaCsList.Add(new KeyValuePair<string, string>(script, line.Substring(6)));
-                }
+                    if (line.Length>=6 && line.Substring(0, 6) == "guid: ")
+                    {
+                        metaCsList.Add(new KeyValuePair<string, string>(script, line.Substring(6)));
+                    } 
             }
+            
+            
+            
         }
 
 
@@ -306,7 +369,7 @@ class UnityFileReader
 
     static void Main(string?[] args)
     {
-        if (args.Length >= 2)
+        if (args.Length == 2)
         {
             _unityProjectPath = args[0];
             _outputFolderPath = args[1];
@@ -321,8 +384,10 @@ class UnityFileReader
         {
             Console.WriteLine("Error: Not enough arguments found!\n Usage: ./tool.exe unity_project_path output_folder_path");   
             Console.WriteLine("Input manually:");
-            _unityProjectPath = "/home/robert/Desktop/unityTool/TestCase01/Assets/";
-            _outputFolderPath = "/home/robert/Desktop/unityTool/Output/";
+            Console.WriteLine("Unity Project Path");
+            _unityProjectPath = Console.ReadLine();
+            Console.WriteLine("Output Folder Path");
+            _outputFolderPath = Console.ReadLine();
             
             WorkingOnUnityProject(_unityProjectPath,_outputFolderPath);
         }
